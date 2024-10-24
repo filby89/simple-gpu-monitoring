@@ -45,13 +45,13 @@ def load_config():
             detail="Error parsing server configuration"
         )
 
-def get_gpus_from_server(hostname, port):
+def get_gpus_from_server(hostname, port, username):
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     try:
-        client.connect(hostname, port=port)
+        client.connect(hostname, port=port, username=username)
         
-        # Get GPU process information and performance state
+        # Rest of the function remains the same
         stdin, stdout, stderr = client.exec_command("""
             nvidia-smi --query-compute-apps=gpu_uuid,pid,used_memory,process_name --format=csv,noheader,nounits &&
             echo "===SEPARATOR===" &&
@@ -127,7 +127,7 @@ async def get_gpus():
     all_gpus = []
     
     for server in config['servers']:
-        server_gpus = get_gpus_from_server(server['hostname'], server['port'])
+        server_gpus = get_gpus_from_server(server['hostname'], server['port'], server['username'])
         all_gpus.append({
             "name": server["name"],
             "server": f"{server['hostname']}:{server['port']}",
