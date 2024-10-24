@@ -8,7 +8,7 @@ This project was primarily developed with the assistance of Anthropic's Claude (
 A web-based GPU monitoring system that provides real-time information about GPU usage across multiple servers. Built with FastAPI and modern web technologies, designed for IRAL lab at NTUA.
 
 ## Features
-s
+
 - Real-time GPU monitoring across multiple servers
 - Memory usage visualization with progress bars
 - Process and user tracking per GPU
@@ -16,7 +16,6 @@ s
 - Temperature monitoring
 - Multi-server support through YAML configuration
 - Clean, responsive Bootstrap interface
-- Basic authentication protection
 
 ## Prerequisites
 
@@ -46,7 +45,6 @@ cp config.sample.yaml config.yaml
 ```bash
 python main.py
 ```
-
 
 
 ## License
