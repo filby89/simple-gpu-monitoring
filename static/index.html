@@ -25,6 +25,10 @@
             line-height: 1;
             letter-spacing: 2px;
         }
+        .last-updated {
+            color: #adb5bd;
+            font-size: 0.9rem;
+        }
         .table th {
             background-color: #f8f9fa;
         }
@@ -78,6 +82,9 @@
                 <div class="iral-logo">IRAL</div>
                 GPU Monitor
             </a>
+            <div class="last-updated">
+                Last updated: <span id="lastUpdated">Just now</span>
+            </div>
         </div>
     </nav>
 
@@ -92,10 +99,27 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     
     <script>
+        let lastUpdateTime = Date.now();
+
+        function updateTimestamp() {
+            const now = Date.now();
+            const seconds = Math.floor((now - lastUpdateTime) / 1000);
+            const lastUpdatedElement = document.getElementById('lastUpdated');
+            
+            if (seconds < 5) {
+                lastUpdatedElement.textContent = 'Just now';
+            } else {
+                lastUpdatedElement.textContent = `${seconds} seconds ago`;
+            }
+        }
+
         function updateGPUData() {
             fetch('/api/gpus')
                 .then(response => response.json())
                 .then(data => {
+                    lastUpdateTime = Date.now();
+                    updateTimestamp();
+                    
                     const container = document.getElementById('gpuData');
                     container.innerHTML = '';
                     
@@ -208,6 +232,9 @@
         // Update data every 5 seconds
         updateGPUData();
         setInterval(updateGPUData, 5000);
+        
+        // Update timestamp every second
+        setInterval(updateTimestamp, 1000);
     </script>
 </body>
 </html>
