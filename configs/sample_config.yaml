@@ -1,0 +1,8 @@
+# Sample configuration file (config.sample.yaml)
+servers:
+  - name: "GPU Server 1"
+    hostname: "example1.domain.com"
+    port: 22
+  - name: "GPU Server 2"
+    hostname: "example2.domain.com"
+    port: 22

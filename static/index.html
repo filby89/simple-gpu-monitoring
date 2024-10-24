@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPU Monitor</title>
+    <!-- Google Fonts - Indie Flower -->
+    <link href="https://fonts.googleapis.com/css2?family=Indie+Flower&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .navbar-brand {
+            font-size: 1.5rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .iral-logo {
+            font-family: 'Indie Flower', cursive;
+            font-size: 2.5rem;
+            color: #fff;
+            margin: 0;
+            padding: 0;
+            line-height: 1;
+            letter-spacing: 2px;
+        }
+        .table th {
+            background-color: #f8f9fa;
+        }
+        .status-icon {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        .status-free {
+            background-color: #28a745;
+        }
+        .status-used {
+            background-color: #dc3545;
+        }
+        .server-card {
+            margin-bottom: 2rem;
+        }
+        .process-list {
+            margin: 0;
+            padding: 0;
+            list-style: none;
+            font-size: 0.9rem;
+        }
+        .process-item {
+            display: inline-block;
+            background-color: #f8f9fa;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin: 2px 4px;
+            border: 1px solid #dee2e6;
+        }
+        .memory-bar {
+            height: 20px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .memory-used {
+            height: 100%;
+            background-color: #0d6efd;
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <div class="iral-logo">IRAL</div>
+                GPU Monitor
+            </a>
+        </div>
+    </nav>
+
+    <div class="container" id="gpuData">
+        <div class="text-center">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        function updateGPUData() {
+            fetch('/api/gpus')
+                .then(response => response.json())
+                .then(data => {
+                    const container = document.getElementById('gpuData');
+                    container.innerHTML = '';
+                    
+                    data.forEach(server => {
+                        const serverDiv = document.createElement('div');
+                        serverDiv.className = 'server-card card shadow-sm';
+                        
+                        let serverHtml = `
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-server me-2"></i>
+                                    ${server.name}
+                                </h5>
+                                <small class="text-muted">${server.server}</small>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Status</th>
+                                                <th>GPU ID</th>
+                                                <th>Name</th>
+                                                <th>Memory</th>
+                                                <th>Temperature</th>
+                                                <th>P-State</th>
+                                                <th>Processes</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                        `;
+                        
+                        server.gpus.forEach(gpu => {
+                            if (gpu.error) {
+                                serverHtml += `
+                                    <tr>
+                                        <td colspan="7" class="text-danger">
+                                            <i class="fas fa-exclamation-triangle me-2"></i>
+                                            Error: ${gpu.error}
+                                        </td>
+                                    </tr>
+                                `;
+                            } else {
+                                const statusClass = gpu.is_used ? 'status-used' : 'status-free';
+                                const statusText = gpu.is_used ? 'In Use' : 'Free';
+                                const memoryPercent = (gpu.ram_used / gpu.total_memory * 100).toFixed(1);
+                                
+                                serverHtml += `
+                                    <tr>
+                                        <td>
+                                            <span class="status-icon ${statusClass}"></span>
+                                            ${statusText}
+                                        </td>
+                                        <td>${gpu.gpu_id}</td>
+                                        <td>${gpu.gpu_name}</td>
+                                        <td>
+                                            <div class="memory-bar">
+                                                <div class="memory-used" style="width: ${memoryPercent}%"></div>
+                                            </div>
+                                            <small>${gpu.ram_used} / ${gpu.total_memory} MB (${memoryPercent}%)</small>
+                                        </td>
+                                        <td>${gpu.temperature}°C</td>
+                                        <td>${gpu.pstate}</td>
+                                        <td>
+                                            <ul class="process-list">
+                                `;
+                                
+                                if (gpu.processes && gpu.processes.length > 0) {
+                                    gpu.processes.forEach(process => {
+                                        serverHtml += `
+                                            <li class="process-item">
+                                                ${process.username} (${process.pid})
+                                            </li>
+                                        `;
+                                    });
+                                } else {
+                                    serverHtml += '<span class="text-muted">No active processes</span>';
+                                }
+                                
+                                serverHtml += `
+                                            </ul>
+                                        </td>
+                                    </tr>
+                                `;
+                            }
+                        });
+                        
+                        serverHtml += `
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        `;
+                        
+                        serverDiv.innerHTML = serverHtml;
+                        container.appendChild(serverDiv);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching GPU data:', error);
+                    document.getElementById('gpuData').innerHTML = `
+                        <div class="alert alert-danger" role="alert">
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            Error fetching GPU data: ${error.message}
+                        </div>
+                    `;
+                });
+        }
+
+        // Update data every 5 seconds
+        updateGPUData();
+        setInterval(updateGPUData, 5000);
+    </script>
+</body>
+</html>
