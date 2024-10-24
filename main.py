@@ -44,12 +44,39 @@ def load_config():
             status_code=500,
             detail="Error parsing server configuration"
         )
-
+    
 def get_gpus_from_server(hostname, port, username):
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     try:
-        client.connect(hostname, port=port, username=username)
+        # Look for SSH key in the standard location
+        ssh_key_path = os.path.expanduser('~/.ssh/id_rsa')
+        
+        if not os.path.exists(ssh_key_path):
+            # Try alternate key names if id_rsa doesn't exist
+            alternate_keys = ['id_ed25519', 'id_ecdsa', 'id_dsa']
+            for key_name in alternate_keys:
+                alt_path = os.path.expanduser(f'~/.ssh/{key_name}')
+                if os.path.exists(alt_path):
+                    ssh_key_path = alt_path
+                    break
+
+        # Load the key
+        try:
+            ssh_key = paramiko.RSAKey.from_private_key_file(ssh_key_path)
+        except:
+            # If RSA fails, try loading as any key type
+            ssh_key = paramiko.Ed25519Key.from_private_key_file(ssh_key_path)
+
+        client.connect(
+            hostname, 
+            port=port, 
+            username=username,
+            pkey=ssh_key,
+            look_for_keys=True,
+            timeout=10
+        )
+        
         
         # Rest of the function remains the same
         stdin, stdout, stderr = client.exec_command("""
@@ -57,6 +84,7 @@ def get_gpus_from_server(hostname, port, username):
             echo "===SEPARATOR===" &&
             nvidia-smi --query-gpu=gpu_uuid,index,name,memory.total,memory.used,temperature.gpu,pstate --format=csv,noheader,nounits
         """)
+        
         output = stdout.read().decode().strip()
         
         # Split the output
@@ -117,6 +145,7 @@ def get_gpus_from_server(hostname, port, username):
                 
         return gpu_list
     except Exception as e:
+        print(f"SSH Error for {hostname}:{port} - {str(e)}")  # Add detailed error logging
         return [{"error": str(e)}]
     finally:
         client.close()
