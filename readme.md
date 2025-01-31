@@ -1,7 +1,7 @@
 # GPU Monitor
 
 ## ⚠️ Development Disclaimer
-This project was primarily developed with the assistance of Anthropic's Claude (version 3.5). The AI assistant helped in creating the core functionality, architecture, and documentation. Human oversight and modifications were applied to ensure proper functionality and security.
+This project was primarily developed with the assistance of Anthropic's Claude (version 3.5) and GPT-4-o1. The AI assistants helped in creating the core functionality, architecture, and documentation. Human oversight and modifications were applied to ensure proper functionality and security.
 
 ---
 

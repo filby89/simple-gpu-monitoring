@@ -1,240 +1,280 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GPU Monitor</title>
-    <!-- Google Fonts - Indie Flower -->
-    <link href="https://fonts.googleapis.com/css2?family=Indie+Flower&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        .navbar-brand {
-            font-size: 1.5rem;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-        .iral-logo {
-            font-family: 'Indie Flower', cursive;
-            font-size: 2.5rem;
-            color: #fff;
-            margin: 0;
-            padding: 0;
-            line-height: 1;
-            letter-spacing: 2px;
-        }
-        .last-updated {
-            color: #adb5bd;
-            font-size: 0.9rem;
-        }
-        .table th {
-            background-color: #f8f9fa;
-        }
-        .status-icon {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            display: inline-block;
-            margin-right: 8px;
-        }
-        .status-free {
-            background-color: #28a745;
-        }
-        .status-used {
-            background-color: #dc3545;
-        }
-        .server-card {
-            margin-bottom: 2rem;
-        }
-        .process-list {
-            margin: 0;
-            padding: 0;
-            list-style: none;
-            font-size: 0.9rem;
-        }
-        .process-item {
-            display: inline-block;
-            background-color: #f8f9fa;
-            padding: 2px 8px;
-            border-radius: 4px;
-            margin: 2px 4px;
-            border: 1px solid #dee2e6;
-        }
-        .memory-bar {
-            height: 20px;
-            background-color: #e9ecef;
-            border-radius: 4px;
-            overflow: hidden;
-        }
-        .memory-used {
-            height: 100%;
-            background-color: #0d6efd;
-            transition: width 0.3s ease;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>GPU Monitor</title>
+  <link href="https://fonts.googleapis.com/css2?family=Indie+Flower&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <style>
+    .navbar-brand {
+      font-size: 1.5rem;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    .iral-logo {
+      font-family: 'Indie Flower', cursive;
+      font-size: 2.5rem;
+      color: #fff;
+      margin: 0;
+      padding: 0;
+      line-height: 1;
+      letter-spacing: 2px;
+    }
+    .table th {
+      background-color: #f8f9fa;
+    }
+    .status-icon {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 8px;
+    }
+    .status-free {
+      background-color: #28a745;
+    }
+    .status-used {
+      background-color: #dc3545;
+    }
+    .server-card {
+      margin-bottom: 2rem;
+    }
+    .process-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      font-size: 0.9rem;
+    }
+    .process-item {
+      display: inline-block;
+      background-color: #f8f9fa;
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin: 2px 4px;
+      border: 1px solid #dee2e6;
+    }
+    .memory-bar {
+      height: 20px;
+      background-color: #e9ecef;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .memory-used {
+      height: 100%;
+      background-color: #0d6efd;
+      transition: width 0.3s ease;
+    }
+    .util-bar {
+      height: 20px;
+      background-color: #e9ecef;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .util-used {
+      height: 100%;
+      background-color: #ffc107;
+      transition: width 0.3s ease;
+    }
+    .hidden {
+      display: none;
+    }
+    .last-updated-server {
+      font-size: 0.85rem;
+      color: #6c757d;
+    }
+  </style>
 </head>
 <body class="bg-light">
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
-        <div class="container">
-            <a class="navbar-brand" href="#">
-                <div class="iral-logo">IRAL</div>
-                GPU Monitor
-            </a>
-            <div class="last-updated">
-                Last updated: <span id="lastUpdated">Just now</span>
-            </div>
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+  <div class="container">
+    <a class="navbar-brand" href="#">
+      <div class="iral-logo">IRAL</div>
+      GPU Monitor
+    </a>
+  </div>
+</nav>
+
+<div class="container" id="gpuData"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  // Track last-updated time for each server
+  const lastUpdatedByServer = {};
+
+  function formatSecondsAgo(ts) {
+    if (!ts) return "Never";
+    const now = Date.now();
+    const diff = Math.floor((now - ts) / 1000);
+    if (diff < 5) return "Just now";
+    return `${diff} seconds ago`;
+  }
+
+  function updateAllServerTimestamps() {
+    for (let serverKey in lastUpdatedByServer) {
+      const el = document.getElementById(`${serverKey}-updated`);
+      if (!el) continue;
+      const ts = lastUpdatedByServer[serverKey];
+      el.textContent = formatSecondsAgo(ts);
+    }
+  }
+
+  function createServerPlaceholder(name, endpoint) {
+    const container = document.getElementById('gpuData');
+    const serverId = `server-${endpoint.replace(/[^a-zA-Z0-9]/g, "")}`;
+    if (document.getElementById(serverId)) return;
+
+    const card = document.createElement('div');
+    card.id = serverId;
+    card.className = 'server-card card shadow-sm mb-4';
+
+    card.innerHTML = `
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <div>
+          <h5 class="mb-0"><i class="fas fa-server me-2"></i> ${name}</h5>
+          <small class="text-muted">${endpoint}</small>
         </div>
-    </nav>
-
-    <div class="container" id="gpuData">
-        <div class="text-center">
-            <div class="spinner-border" role="status">
-                <span class="visually-hidden">Loading...</span>
-            </div>
+        <div class="last-updated-server">
+          Last updated: <span id="${serverId}-updated">Never</span>
         </div>
-    </div>
+      </div>
+      <div class="card-body">
+        <div class="text-center" id="${serverId}-spinner">
+          <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+        </div>
+        <div class="table-responsive hidden" id="${serverId}-table"></div>
+      </div>
+    `;
+    container.appendChild(card);
+  }
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    
-    <script>
-        let lastUpdateTime = Date.now();
+  function renderServerData(name, endpoint, gpus) {
+    const serverId = `server-${endpoint.replace(/[^a-zA-Z0-9]/g, "")}`;
+    const spinner = document.getElementById(`${serverId}-spinner`);
+    const tableDiv = document.getElementById(`${serverId}-table`);
 
-        function updateTimestamp() {
-            const now = Date.now();
-            const seconds = Math.floor((now - lastUpdateTime) / 1000);
-            const lastUpdatedElement = document.getElementById('lastUpdated');
-            
-            if (seconds < 5) {
-                lastUpdatedElement.textContent = 'Just now';
-            } else {
-                lastUpdatedElement.textContent = `${seconds} seconds ago`;
-            }
+    // Update lastUpdated time for this server
+    lastUpdatedByServer[serverId] = Date.now();
+
+    if (spinner) spinner.classList.add('hidden');
+    if (tableDiv) tableDiv.classList.remove('hidden');
+
+    let html = `
+      <table class="table table-hover">
+        <thead>
+          <tr>
+            <th>Status</th>
+            <th>GPU ID</th>
+            <th>Name</th>
+            <th>Memory</th>
+            <th>Temperature</th>
+            <th>P-State</th>
+            <th>Utilization</th>
+            <th>Processes</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+    gpus.forEach(gpu => {
+      if (gpu.error) {
+        html += `
+          <tr>
+            <td colspan="8" class="text-danger">
+              <i class="fas fa-exclamation-triangle me-2"></i>
+              Error: ${gpu.error}
+            </td>
+          </tr>
+        `;
+      } else {
+        const statusClass = gpu.is_used ? 'status-used' : 'status-free';
+        const statusText = gpu.is_used ? 'In Use' : 'Free';
+
+        const usedMem = parseFloat(gpu.ram_used) || 0;
+        const totalMem = parseFloat(gpu.total_memory) || 1;
+        const memPct = ((usedMem / totalMem) * 100).toFixed(1);
+
+        const util = parseFloat(gpu.utilization) || 0;
+
+        html += `
+          <tr>
+            <td>
+              <span class="status-icon ${statusClass}"></span>
+              ${statusText}
+            </td>
+            <td>${gpu.gpu_id}</td>
+            <td>${gpu.gpu_name}</td>
+            <td>
+              <div class="memory-bar mb-1">
+                <div class="memory-used" style="width: ${memPct}%"></div>
+              </div>
+              <small>${usedMem} / ${totalMem} MB (${memPct}%)</small>
+            </td>
+            <td>${gpu.temperature}°C</td>
+            <td>${gpu.pstate}</td>
+            <td>
+              <div class="util-bar mb-1">
+                <div class="util-used" style="width: ${util}%"></div>
+              </div>
+              <small>${util}%</small>
+            </td>
+            <td>
+              <ul class="process-list">
+        `;
+        if (gpu.processes && gpu.processes.length > 0) {
+          gpu.processes.forEach(proc => {
+            html += `
+              <li class="process-item">
+                ${proc.username} (${proc.pid})
+              </li>
+            `;
+          });
+        } else {
+          html += `<span class="text-muted">No active processes</span>`;
         }
+        html += `
+              </ul>
+            </td>
+          </tr>
+        `;
+      }
+    });
+    html += '</tbody></table>';
+    if (tableDiv) tableDiv.innerHTML = html;
+  }
 
-        function updateGPUData() {
-            fetch('/api/gpus')
-                .then(response => response.json())
-                .then(data => {
-                    lastUpdateTime = Date.now();
-                    updateTimestamp();
-                    
-                    const container = document.getElementById('gpuData');
-                    container.innerHTML = '';
-                    
-                    data.forEach(server => {
-                        const serverDiv = document.createElement('div');
-                        serverDiv.className = 'server-card card shadow-sm';
-                        
-                        let serverHtml = `
-                            <div class="card-header d-flex justify-content-between align-items-center">
-                                <h5 class="mb-0">
-                                    <i class="fas fa-server me-2"></i>
-                                    ${server.name}
-                                </h5>
-                                <small class="text-muted">${server.server}</small>
-                            </div>
-                            <div class="card-body">
-                                <div class="table-responsive">
-                                    <table class="table table-hover">
-                                        <thead>
-                                            <tr>
-                                                <th>Status</th>
-                                                <th>GPU ID</th>
-                                                <th>Name</th>
-                                                <th>Memory</th>
-                                                <th>Temperature</th>
-                                                <th>P-State</th>
-                                                <th>Processes</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                        `;
-                        
-                        server.gpus.forEach(gpu => {
-                            if (gpu.error) {
-                                serverHtml += `
-                                    <tr>
-                                        <td colspan="7" class="text-danger">
-                                            <i class="fas fa-exclamation-triangle me-2"></i>
-                                            Error: ${gpu.error}
-                                        </td>
-                                    </tr>
-                                `;
-                            } else {
-                                const statusClass = gpu.is_used ? 'status-used' : 'status-free';
-                                const statusText = gpu.is_used ? 'In Use' : 'Free';
-                                const memoryPercent = (gpu.ram_used / gpu.total_memory * 100).toFixed(1);
-                                
-                                serverHtml += `
-                                    <tr>
-                                        <td>
-                                            <span class="status-icon ${statusClass}"></span>
-                                            ${statusText}
-                                        </td>
-                                        <td>${gpu.gpu_id}</td>
-                                        <td>${gpu.gpu_name}</td>
-                                        <td>
-                                            <div class="memory-bar">
-                                                <div class="memory-used" style="width: ${memoryPercent}%"></div>
-                                            </div>
-                                            <small>${gpu.ram_used} / ${gpu.total_memory} MB (${memoryPercent}%)</small>
-                                        </td>
-                                        <td>${gpu.temperature}°C</td>
-                                        <td>${gpu.pstate}</td>
-                                        <td>
-                                            <ul class="process-list">
-                                `;
-                                
-                                if (gpu.processes && gpu.processes.length > 0) {
-                                    gpu.processes.forEach(process => {
-                                        serverHtml += `
-                                            <li class="process-item">
-                                                ${process.username} (${process.pid})
-                                            </li>
-                                        `;
-                                    });
-                                } else {
-                                    serverHtml += '<span class="text-muted">No active processes</span>';
-                                }
-                                
-                                serverHtml += `
-                                            </ul>
-                                        </td>
-                                    </tr>
-                                `;
-                            }
-                        });
-                        
-                        serverHtml += `
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        `;
-                        
-                        serverDiv.innerHTML = serverHtml;
-                        container.appendChild(serverDiv);
-                    });
-                })
-                .catch(error => {
-                    console.error('Error fetching GPU data:', error);
-                    document.getElementById('gpuData').innerHTML = `
-                        <div class="alert alert-danger" role="alert">
-                            <i class="fas fa-exclamation-circle me-2"></i>
-                            Error fetching GPU data: ${error.message}
-                        </div>
-                    `;
-                });
-        }
+  // 1) Create placeholders
+  fetch('/api/servers')
+    .then(r => r.json())
+    .then(servers => {
+      servers.forEach(s => {
+        createServerPlaceholder(s.name, s.server);
+      });
+    })
+    .catch(err => {
+      document.getElementById('gpuData').innerHTML = `
+        <div class="alert alert-danger" role="alert">
+          Could not load servers list: ${err.message}
+        </div>
+      `;
+    });
 
-        // Update data every 5 seconds
-        updateGPUData();
-        setInterval(updateGPUData, 5000);
-        
-        // Update timestamp every second
-        setInterval(updateTimestamp, 1000);
-    </script>
+  // 2) Open SSE
+  const sse = new EventSource('/api/gpus/stream');
+  sse.onmessage = (evt) => {
+    const data = JSON.parse(evt.data);
+    renderServerData(data.name, data.server, data.gpus);
+  };
+  sse.onerror = (err) => {
+    console.warn("SSE error:", err);
+    // Typically, the browser might auto-reconnect if server restarts
+  };
+
+  // 3) Update per-server timestamps once per second
+  setInterval(updateAllServerTimestamps, 1000);
+</script>
 </body>
 </html>
