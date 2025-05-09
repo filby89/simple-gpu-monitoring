@@ -1,0 +1,17 @@
+servers:
+  - name: "Halki"
+    hostname: "n12halki.cs.ntua.gr"
+    port: 22
+    username: "filby"
+  - name: "Kalymnos"
+    hostname: "n12halki.cs.ntua.gr"
+    port: 2222
+    username: "filby"
+  - name: "Glaros"
+    hostname: "n12halki.cs.ntua.gr"
+    port: 4444
+    username: "filby"
+  - name: "Antitilos"
+    hostname: "n12halki.cs.ntua.gr"
+    port: 6666
+    username: "filby"

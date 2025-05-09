@@ -101,8 +101,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-  // List of usernames considered "admins"
-  const adminUsers = ["filby"]; // <-- ADD YOUR ADMIN NAMES HERE
+  // List of usernames considered "admins" (show pirate skull)
+  const adminUsers = ["filby", "chgar"]; // <-- Edit as needed
 
   // Track last-updated time for each server
   const lastUpdatedByServer = {};
@@ -182,7 +182,6 @@
         </thead>
         <tbody>
     `;
-
     gpus.forEach(gpu => {
       if (gpu.error) {
         html += `
@@ -230,12 +229,13 @@
         `;
         if (gpu.processes && gpu.processes.length > 0) {
           gpu.processes.forEach(proc => {
+            // Check if process user is in admin list
             const isAdmin = adminUsers.includes(proc.username);
-            // If user is admin, show a pirate skull icon
-            const adminIcon = isAdmin ? '<i class="fas fa-skull-crossbones text-danger"></i> ' : '';
+            const icon = isAdmin ? '<i class="fas fa-robot text-danger"></i> ' : '';
+            // const icon = isAdmin ? '<i class="fas fa-skull-crossbones text-danger"></i> ' : '';
             html += `
               <li class="process-item">
-                ${adminIcon}${proc.username} (${proc.pid})
+                ${icon}${proc.username} (${proc.pid})
               </li>
             `;
           });
@@ -249,12 +249,11 @@
         `;
       }
     });
-
     html += '</tbody></table>';
     if (tableDiv) tableDiv.innerHTML = html;
   }
 
-  // 1) Create placeholders for each server
+  // 1) Create placeholders
   fetch('/api/servers')
     .then(r => r.json())
     .then(servers => {
@@ -270,7 +269,7 @@
       `;
     });
 
-  // 2) Open SSE to receive partial updates
+  // 2) Open SSE
   const sse = new EventSource('/api/gpus/stream');
   sse.onmessage = (evt) => {
     const data = JSON.parse(evt.data);
@@ -278,7 +277,7 @@
   };
   sse.onerror = (err) => {
     console.warn("SSE error:", err);
-    // The browser usually auto-reconnects if the server restarts
+    // Typically, the browser might auto-reconnect if server restarts
   };
 
   // 3) Update per-server timestamps once per second

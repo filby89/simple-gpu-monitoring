@@ -146,6 +146,33 @@ def fetch_gpu_data_sync(hostname, port, username):
         client.close()
 
 
+async def gather_all_servers():
+    config = load_config()
+    servers = config.get("servers", [])
+    loop = asyncio.get_running_loop()
+
+    tasks = []
+    with concurrent.futures.ProcessPoolExecutor() as pool:
+        for s in servers:
+            f = loop.run_in_executor(
+                pool,
+                fetch_gpu_data_sync,
+                s["hostname"],
+                s["port"],
+                s.get("username", "ubuntu")
+            )
+            tasks.append((s, f))
+
+        results = []
+        for s, fut in tasks:
+            gpus = await fut
+            results.append({
+                "name": s["name"],
+                "server": f"{s['hostname']}:{s['port']}",
+                "gpus": gpus
+            })
+    return results
+
 
 @app.get("/api/servers")
 def get_servers():
@@ -161,53 +188,15 @@ def get_servers():
 
 @app.get("/api/gpus/stream")
 async def sse_gpus_stream(request: Request):
-    config = load_config()
-    servers = config.get("servers", [])
-
     async def event_generator():
         REFRESH_SECONDS = 5
-        TIMEOUT_SECONDS = 10
         while True:
-            for s in servers:
-                if await request.is_disconnected():
-                    return
+            all_data = await gather_all_servers()
+            for data in all_data:
+                yield f"data: {json.dumps(data)}\n\n"
 
-                loop = asyncio.get_running_loop()
-                try:
-                    gpus = await asyncio.wait_for(
-                        loop.run_in_executor(
-                            None,
-                            fetch_gpu_data_sync,
-                            s["hostname"],
-                            s["port"],
-                            s.get("username", "ubuntu")
-                        ),
-                        timeout=TIMEOUT_SECONDS
-                    )
-                    server_data = {
-                        "name": s["name"],
-                        "server": f"{s['hostname']}:{s['port']}",
-                        "gpus": gpus
-                    }
-                    yield f"data: {json.dumps(server_data)}\n\n"
-
-                except asyncio.TimeoutError:
-                    server_data = {
-                        "name": s["name"],
-                        "server": f"{s['hostname']}:{s['port']}",
-                        "gpus": [{"error": "Timeout"}]
-                    }
-                    yield f"data: {json.dumps(server_data)}\n\n"
-
-                except Exception as e:
-                    server_data = {
-                        "name": s["name"],
-                        "server": f"{s['hostname']}:{s['port']}",
-                        "gpus": [{"error": str(e)}]
-                    }
-                    yield f"data: {json.dumps(server_data)}\n\n"
-
-                await asyncio.sleep(0.1)  # small delay between servers
+            if await request.is_disconnected():
+                break
 
             await asyncio.sleep(REFRESH_SECONDS)
 
@@ -216,6 +205,7 @@ async def sse_gpus_stream(request: Request):
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache"}
     )
+
 
 @app.get("/")
 def root_index():
